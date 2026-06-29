@@ -9,16 +9,22 @@ jobs:
   shallow-sync:
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 从 GitGud 浅克隆 master 分支 (最新 100 条)
+      - name: 📥 从 GitGud 浅克隆 master 
         run: |
           # 仅拉取 master 分支，深度设为 100
-          git clone --depth 100 --single-branch --branch master https://gitgud.io/Vrelnir/degrees-of-lewdity.git repo-sync
-      
+          git clone --single-branch --branch master https://gitgud.io/Vrelnir/degrees-of-lewdity.git repo-sync
+          
+      - name: 🖨️ 打印克隆下来的文件列表 (用于核对)
+        run: |
+          echo "✅ 克隆成功！以下是 repo-sync 目录下的文件清单："
+          # 使用 ls -lh 打印出包含隐藏文件(.git)在内的所有文件和大小
+          ls -lh repo-sync
+          
       - name: 📤 推送至 Forgejo 组织仓库
         run: |
           cd repo-sync
           # 添加 Forgejo 组织项目为远程地址
-          git remote add forgejo http://${{ secrets.FORGEJO_USERNAME }}:${{ secrets.FORGEJO_TOKEN }}@${{ secrets.FORGEJO_DOMAIN }}/${{ secrets.FORGEJO_ORG }}/degrees-of-lewdity.git
+          git remote add forgejo ${{ secrets.FORGEJO_HTTP }}://${{ secrets.FORGEJO_USERNAME }}:${{ secrets.FORGEJO_TOKEN }}@${{ secrets.FORGEJO_DOMAIN }}/${{ secrets.FORGEJO_ORG }}/degrees-of-lewdity.git
           
           # 强制推送 master 分支
           # (浅克隆由于缺少完整历史，日常同步时需要加 -f 参数来覆盖更新目标仓库)
