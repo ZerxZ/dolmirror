@@ -1,4 +1,4 @@
-name: 🔄 Sync GitGud to Forgejo (Master Only)
+name: 🔄 Sync GitGud to Forgejo (Smart Update)
 
 on:
   workflow_dispatch: 
@@ -6,26 +6,46 @@ on:
     - cron: '0 2 * * *' 
 
 jobs:
-  shallow-sync:
+  smart-update:
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 从 GitGud 浅克隆 master 
+      - name: 📥 从 Forgejo 浅克隆 (深度 1)
         run: |
-          # 仅拉取 master 分支，深度设为 100
-          git clone --single-branch --branch master https://gitgud.io/Vrelnir/degrees-of-lewdity.git repo-sync
+          # 从您的服务器只拉取最新的 1 个提交
+          git clone --depth 1 --single-branch --branch master ${{ secrets.FORGEJO_HTTP }}://${{ secrets.FORGEJO_USERNAME }}:${{ secrets.FORGEJO_TOKEN }}@${{ secrets.FORGEJO_DOMAIN }}/${{ secrets.FORGEJO_ORG }}/degrees-of-lewdity.git repo-sync
           
-      - name: 🖨️ 打印克隆下来的文件列表 (用于核对)
-        run: |
-          echo "✅ 克隆成功！以下是 repo-sync 目录下的文件清单："
-          # 使用 ls -lh 打印出包含隐藏文件(.git)在内的所有文件和大小
-          ls -lh repo-sync
-          
-      - name: 📤 推送至 Forgejo 组织仓库
+      - name: 🔄 检测 GitGud 更新并同步
         run: |
           cd repo-sync
-          # 添加 Forgejo 组织项目为远程地址
-          git remote add forgejo ${{ secrets.FORGEJO_HTTP }}://${{ secrets.FORGEJO_USERNAME }}:${{ secrets.FORGEJO_TOKEN }}@${{ secrets.FORGEJO_DOMAIN }}/${{ secrets.FORGEJO_ORG }}/degrees-of-lewdity.git
           
-          # 强制推送 master 分支
-          # (浅克隆由于缺少完整历史，日常同步时需要加 -f 参数来覆盖更新目标仓库)
-          git push -f forgejo master
+          # 1. 添加 GitGud 作为额外的远程仓库
+          git remote add gitgud https://gitgud.io/Vrelnir/degrees-of-lewdity.git
+          
+          # 2. 尝试获取 GitGud 的最新状态
+          echo "正在获取 GitGud 最新数据..."
+          git fetch gitgud master
+          
+          # 3. 对比 Forgejo 和 GitGud 的最新提交哈希 (Commit Hash)
+          FORGEJO_HEAD=$(git rev-parse HEAD)
+          GITGUD_HEAD=$(git rev-parse gitgud/master)
+          
+          echo "----------------------------------------"
+          echo "Forgejo 当前版本: $FORGEJO_HEAD"
+          echo "GitGud  最新版本: $GITGUD_HEAD"
+          echo "----------------------------------------"
+          
+          # 4. 判断是否需要更新
+          if [ "$FORGEJO_HEAD" = "$GITGUD_HEAD" ]; then
+            echo "✅ 两个版本完全一致，无需更新！"
+          else
+            echo "⚠️ 发现 GitGud 有新提交！正在准备更新 Forgejo..."
+            
+            # 将本地指针硬重置到 GitGud 的最新提交（完美衔接新历史）
+            git reset --hard gitgud/master
+            
+            # 推送回 Forgejo。因为只是向后追加新提交，所以不需要 -f 强制推送
+            # 这样绝对不会破坏 Forgejo 上已经存在的历史 Commit
+            git push origin master
+            
+            echo "🎉 更新已成功推送到 Forgejo！"
+          fi
