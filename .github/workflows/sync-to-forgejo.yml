@@ -18,7 +18,7 @@ jobs:
         run: |
           cd repo-sync
           # 添加 Forgejo 组织项目为远程地址
-          git remote add forgejo https://${{ secrets.FORGEJO_USERNAME }}:${{ secrets.FORGEJO_TOKEN }}@${{ secrets.FORGEJO_DOMAIN }}/${{ secrets.FORGEJO_ORG }}/degrees-of-lewdity.git
+          git remote add forgejo http://${{ secrets.FORGEJO_USERNAME }}:${{ secrets.FORGEJO_TOKEN }}@${{ secrets.FORGEJO_DOMAIN }}/${{ secrets.FORGEJO_ORG }}/degrees-of-lewdity.git
           
           # 强制推送 master 分支
           # (浅克隆由于缺少完整历史，日常同步时需要加 -f 参数来覆盖更新目标仓库)
